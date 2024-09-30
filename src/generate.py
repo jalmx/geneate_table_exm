@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# pylint: disable=bare-except
 """
 Generate a table html from file text
 """
@@ -7,19 +8,17 @@ import json
 from pathlib import Path
 from sys import argv
 from os import path
-import random
+import sys
 
 HELP = """
 How to use:
 
-    gtable <path_src_questions>.txt 
+    gtable <path_src_questions>.txt
     gtable <path_src_questions>.txt <random_answer>.json
 
-    gtable exam_p1.txt 
+    gtable exam_p1.txt
     gtable exam_p1.txt random.json
 """
-
-ESCAPE = r'\='
 
 
 def _clear_sentence(question: str) -> str:
@@ -39,105 +38,126 @@ def _clear_sentence(question: str) -> str:
     return question.strip()
 
 
-def _generate_txt_questions_base(txt: str,
-                                 answer: str,
-                                 number: int,
-                                 name_question="question") -> str:
-    txt_parse = (
-        f'// question: {number}  name: {name_question}\n::{name_question}::[html]<p dir{ESCAPE}"ltr" style{ESCAPE}"text-align\\: left;">{_clear_sentence(txt)}<br></p>'
-        + "{" + answer + "}")
-    return txt_parse
+def _generate_txt_questions_base(txt: str, number: int, answer: str) -> str:
+    """Generate line for html with the question
+
+    Args:
+        txt (str): question body
+        number (int): number for the question
+        answer (str): text with all answers
+
+    Returns:
+        str: template html with all body
+    """
+    return f' <tr><td colspan="3"> {number}.- {_clear_sentence(txt)}</td></tr>{answer}'
 
 
 def _generate_answers(answer: str, answers_wrong: list):
 
-    answer_ok = f'\n\t=<p dir{ESCAPE}"ltr" style{ESCAPE}"text-align\\: left;">{_clear_sentence( answer)}<br></p>\n'
+    answer_ok = f'<td width="33%" style="text-align: center;">{_clear_sentence( answer)}</td>'
 
     answer_final = answer_ok
 
     for answer_wrong in answers_wrong:
 
-        answer_final += f'\t~<p dir{ESCAPE}"ltr" style{ESCAPE}"text-align\\: left;">{_clear_sentence(answer_wrong)}<br></p>\n'
+        answer_final += f'<td width="33%" style="text-align: center;">{_clear_sentence(answer_wrong)}</td>\n'
 
-    return answer_final
+    return f"<tr>{answer_final}</tr>"
 
 
 def _generate_question_multi(txt: str,
                              answer: str,
                              number: int,
-                             wrong_answer: list,
-                             name_question="question") -> str:
+                             wrong_answer: list) -> str:
     answer = _generate_answers(answer=answer, answers_wrong=wrong_answer)
 
     return _generate_txt_questions_base(txt=txt,
-                                        answer=answer,
-                                        number=number,
-                                        name_question=name_question)
+                                        number=number, answer=answer)
 
 
-def _is_true_question(answer: str):
-    return "TRUE" if _clear_sentence(
-        answer).upper() == "Verdadero".upper() else "FALSE"
+def _is_true_question(answer: str) -> str:
+    """Generate template html with the answers for True and False
+
+    Args:
+        answer (str): Answer can be (True | False)
+
+    Returns:
+        str: <tr>
+        <td width="33%" style="text-align: center;" >Verdadero</td>
+        <td  width="33%"></td>
+        <td width="33%" style="text-align: center;">Falso</td>
+        </tr>
+    """
+    answers = ["Verdadero", "Falso"]
+    response = ""
+    if not _clear_sentence(answer).upper() == "Verdadero".upper():
+        answers.reverse()
+
+    response += f'<td  style="text-align: center"> {answers[0]} </td>'
+    response += '<td  style="text-align: center"></td>'
+    response += f'<td  style="text-align: center"> {answers[1]} </td>'
+
+    return f"<tr> {response}</tr>"
 
 
-def _generate_question_bool(txt: str,
-                            answer: str,
-                            number: int,
-                            name_question="question") -> str:
+def _generate_question_bool(txt: str, answer: str, number: int) -> str:
     answer = _is_true_question(answer=answer)
 
-    return _generate_txt_questions_base(txt=txt,
-                                        answer=answer,
-                                        number=number,
-                                        name_question=name_question)
+    return _generate_txt_questions_base(txt=txt, number=number, answer=answer)
 
 
-def parse_question_gift(
-    txt: str,
-    answer: str,
-    number: int,
-    number_raw_question: int,
-    wrong_answer: dict | None,
-    name_question="question",
-):
+def parse_question_rows(txt: str,
+                        answer: str,
+                        number: int,
+                        number_raw_question: int,
+                        wrong_answer: dict = None):
+    """Parse the question from list to create a html template
 
+    Args:
+        txt (str): body question
+        answer (str): correct answer
+        number (int): number question
+        number_raw_question (int): number question
+        wrong_answer (dict, optional): list of wrong answers. Defaults to None.
+
+    Returns:
+        _type_: _description_
+    """
     if wrong_answer and wrong_answer.get(str(number_raw_question)):
         return _generate_question_multi(
             txt=txt,
             answer=answer,
             number=number,
             wrong_answer=wrong_answer.get(str(number_raw_question)),
-            name_question=name_question,
         )
-    else:
-        txt = _generate_question_bool(txt=txt,
-                                      answer=answer,
-                                      number=number,
-                                      name_question=name_question)
-        return txt
+
+    return _generate_question_bool(txt=txt, answer=answer, number=number)
 
 
-def read_file(path_file):
+def load_file_from_exam(path_file) -> list:
     """Reade file from path and return all content in str"""
 
-    with open(path_file, mode="r") as f:
-        return f.read()
+    with open(path_file, mode="r") as document:
+        return document.read()
 
 
-def template_header(name_course=None):
-    name_course = name_course or "WITHOUT COURSE"
+def load_answer_from_json(json_path: str) -> dict:
+    """Load answers from json file to dict
 
-    return f"""// question: 0  name: Switch category to $course$/top/Por defecto en {name_course}
-$CATEGORY: $course$/top/Por defecto en {name_course}"""
+    Returns:
+        str: Path from json file
+    """
+    with open(json_path, mode="r") as file:
+        return json.load(file)
 
 
-def _clear_questions(txt):
+def _clear_questions(txt) -> str:
     content_raw = txt.replace("\t", "").split("\n")
     content_pre = []
 
     for line in content_raw:
         if len(line) > 0:
-            content_pre.append(line)
+            content_pre.append(line.strip())
 
     start = False
     content = []
@@ -149,16 +169,14 @@ def _clear_questions(txt):
     return content
 
 
-def parse_questions(txt: str, prefix_question="Q0", data=dict | None) -> list:
-    """Take the content from file with questions to generate a list with questions to load in a new file"""
+def parse_questions(txt: str, data=None) -> list:
+    """Take the content from file with questions to generate a list with questions
+    to load in a new file"""
 
     content_raw = _clear_questions(txt)
     questions = []
 
     count = 0
-
-    number_base = random.randint(800, 8000)
-    offset = random.randint(20, 50)
 
     count_question = 1
     while count < len(content_raw):
@@ -166,34 +184,35 @@ def parse_questions(txt: str, prefix_question="Q0", data=dict | None) -> list:
         count += 1
         answer = content_raw[count]
         count += 1
-        name_question = f"{prefix_question}_Q{count_question}"
+
         questions.append(
-            parse_question_gift(
+            parse_question_rows(
                 question,
                 answer,
-                number=(number_base + offset + count_question),
-                name_question=name_question,
+                number=count_question,
                 wrong_answer=data,
                 number_raw_question=count_question,
             ))
         count_question += 1
 
+    questions.insert(0, '<table border="1" width="100%"><tbody>')
+    questions.append('</tbody></table>')
     return questions
 
 
-def build_file(path, questions):
+def build_file(path_to_save, questions):
     """Save the final file
 
     Args:
-        path (str): path to save the file
+        path_to_save (str): path_to_save to save the file
         questions (list): All questions to save in list
     """
-    with open(path, mode="w+") as f:
+    with open(path_to_save, mode="w+") as file:
 
         for txt in questions:
-            f.write(txt + "\n\n\r")
+            file.write(txt+"\n")
 
-    print(f"File saved: {path}")
+    print(f"File saved: {path_to_save}")
 
 
 def create_name(path_file: str) -> str:
@@ -207,7 +226,7 @@ def create_name(path_file: str) -> str:
     """
     name_full = path.basename(path_file)
     name = path.splitext(name_full)[0]
-    name += "_gift.txt"
+    name += "_table.html"
     return name
 
 
@@ -223,25 +242,20 @@ def main():
         elif argv[1] == "-h" or argv[1] == "--help":
             print("help:")
             print(HELP)
-            exit(0)
+            sys.exit(0)
 
-        elif len(argv) >= 2 or len(argv) <= 4:
+        elif len(argv) >= 2 or len(argv) <= 3:
             json_answer_wrong = None
             path_question = Path(argv[1])
             name_gift_file = create_name(path_question)
-            print(len(argv))
-            prefix_question = argv[2] if len(argv) > 2 else "Q"
+            # print(len(argv))
 
-            if len(argv) == 4:
-                json_path = argv[3]
-                with open(json_path, mode="r") as f:
-                    json_answer_wrong = json.load(f)
+            if len(argv) == 3:
+                json_path = argv[2]
+                json_answer_wrong = load_answer_from_json(json_path)
 
-            text = read_file(path_question)
-            questions = parse_questions(text,
-                                        prefix_question=prefix_question,
-                                        data=json_answer_wrong)
-            questions.insert(0, template_header(name_gift_file))
+            text = load_file_from_exam(path_question)
+            questions = parse_questions(text, data=json_answer_wrong)
 
             build_file(name_gift_file, questions)
         else:
@@ -253,3 +267,32 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# https://www.w3schools.com/html/html_tables.asp
+
+# <table style="width:100%">
+#   <tr>
+#     <td colspan="3" >Alfreds Futterkiste, Centro comercial Moctezuma</td>
+#   </tr>
+#   <tr>
+#     <td  style="text-align: center" >Centro comercial Moctezuma</td>
+#     <td> </td>
+#     <td  style="text-align: center" >Mexico</td>
+#   </tr>
+#    <tr>
+#     <td colspan="3" >Pregunta con sus 3 respuestas</td>
+#   </tr>
+#   <tr>
+#     <td style="text-align: center" >Centro comercial Moctezuma</td>
+#     <td style="text-align: center" >Mexico</td>
+#     <td style="text-align: center" >Puebla</td>
+#   </tr>
+# </table>
+
+
+#  <tr>
+#   <td width="33%" style="text-align: center;" >Verdadero</td>
+#   <td  width="33%"></td>
+#   <td width="33%" style="text-align: center;">Falso</td>
+#  </tr>
