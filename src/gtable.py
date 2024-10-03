@@ -6,6 +6,7 @@ Generate a table html from file text
 
 import json
 from pathlib import Path
+import random
 from sys import argv
 from os import path
 import sys
@@ -18,6 +19,7 @@ How to use:
 
     gtable exam_p1.txt
     gtable exam_p1.txt random.json
+    
 """
 
 
@@ -52,11 +54,27 @@ def _generate_txt_questions_base(txt: str, number: int, answer: str) -> str:
     return f' <tr><td colspan="3"> {number}.- {_clear_sentence(txt)}</td></tr>{answer}'
 
 
-def _generate_answers(answer: str, answers_wrong: list):
+def _generate_answers(answer: str, answers_wrong: list)-> str:
+    """Generate all text for the answer section row
 
-    answer_ok = f'<td width="33%" style="text-align: center;">{_clear_sentence( answer)}</td>'
+    Args:
+        answer (str): answer right
+        answers_wrong (list): list of answers to complement the row
 
-    answer_final = answer_ok
+    Returns:
+        str: html like this
+
+        <tr>
+            <td width="33%" style="text-align: center;">answer one </td>
+            <td width="33%" style="text-align: center;">answer two</td>
+            <td width="33%" style="text-align: center;">answer three </td>
+        </tr>
+    """
+    answers_wrong.append(answer)
+
+    answer_final = ""
+
+    answers_wrong.sort(reverse=random.choice([True, False]))
 
     for answer_wrong in answers_wrong:
 
@@ -65,14 +83,12 @@ def _generate_answers(answer: str, answers_wrong: list):
     return f"<tr>{answer_final}</tr>"
 
 
-def _generate_question_multi(txt: str,
-                             answer: str,
-                             number: int,
-                             wrong_answer: list) -> str:
+def _generate_question_multi(
+    txt: str, answer: str, number: int, wrong_answer: list
+) -> str:
     answer = _generate_answers(answer=answer, answers_wrong=wrong_answer)
 
-    return _generate_txt_questions_base(txt=txt,
-                                        number=number, answer=answer)
+    return _generate_txt_questions_base(txt=txt, number=number, answer=answer)
 
 
 def _is_true_question(answer: str) -> str:
@@ -106,11 +122,13 @@ def _generate_question_bool(txt: str, answer: str, number: int) -> str:
     return _generate_txt_questions_base(txt=txt, number=number, answer=answer)
 
 
-def parse_question_rows(txt: str,
-                        answer: str,
-                        number: int,
-                        number_raw_question: int,
-                        wrong_answer: dict = None):
+def parse_question_rows(
+    txt: str,
+    answer: str,
+    number: int,
+    number_raw_question: int,
+    wrong_answer: dict = None,
+):
     """Parse the question from list to create a html template
 
     Args:
@@ -192,11 +210,12 @@ def parse_questions(txt: str, data=None) -> list:
                 number=count_question,
                 wrong_answer=data,
                 number_raw_question=count_question,
-            ))
+            )
+        )
         count_question += 1
 
-    questions.insert(0, '<table border="1" width="100%"><tbody>')
-    questions.append('</tbody></table>')
+    questions.insert(0, '<table width="100%"><tbody>')
+    questions.append("</tbody></table>")
     return questions
 
 
@@ -210,7 +229,7 @@ def build_file(path_to_save, questions):
     with open(path_to_save, mode="w+") as file:
 
         for txt in questions:
-            file.write(txt+"\n")
+            file.write(txt + "\n")
 
     print(f"File saved: {path_to_save}")
 
@@ -231,8 +250,7 @@ def create_name(path_file: str) -> str:
 
 
 def main():
-    """Init script
-    """
+    """Init script"""
 
     try:
         if len(argv) == 1:
@@ -261,38 +279,12 @@ def main():
         else:
             print("ERROR")
             print(HELP)
-    except:
-        pass
+    except Exception as ex:
+        import datetime
+        with open(f"error_{datetime.datetime.today()}.log", "w+") as file:
+            file.write(str(ex))
+        print("error -> log")
 
 
 if __name__ == "__main__":
     main()
-
-
-# https://www.w3schools.com/html/html_tables.asp
-
-# <table style="width:100%">
-#   <tr>
-#     <td colspan="3" >Alfreds Futterkiste, Centro comercial Moctezuma</td>
-#   </tr>
-#   <tr>
-#     <td  style="text-align: center" >Centro comercial Moctezuma</td>
-#     <td> </td>
-#     <td  style="text-align: center" >Mexico</td>
-#   </tr>
-#    <tr>
-#     <td colspan="3" >Pregunta con sus 3 respuestas</td>
-#   </tr>
-#   <tr>
-#     <td style="text-align: center" >Centro comercial Moctezuma</td>
-#     <td style="text-align: center" >Mexico</td>
-#     <td style="text-align: center" >Puebla</td>
-#   </tr>
-# </table>
-
-
-#  <tr>
-#   <td width="33%" style="text-align: center;" >Verdadero</td>
-#   <td  width="33%"></td>
-#   <td width="33%" style="text-align: center;">Falso</td>
-#  </tr>
