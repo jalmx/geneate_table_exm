@@ -19,7 +19,7 @@ How to use:
 
     gtable exam_p1.txt
     gtable exam_p1.txt random.json
-    
+
 """
 
 
@@ -73,8 +73,7 @@ def _generate_answers(answer: str, answers_wrong: list)-> str:
     answers_wrong.append(answer)
 
     answer_final = ""
-
-    answers_wrong.sort(reverse=random.choice([True, False]))
+    random.shuffle(answers_wrong)
 
     for answer_wrong in answers_wrong:
 
@@ -91,7 +90,7 @@ def _generate_question_multi(
     return _generate_txt_questions_base(txt=txt, number=number, answer=answer)
 
 
-def _is_true_question(answer: str) -> str:
+def _get_question_bool(answer: str) -> str:
     """Generate template html with the answers for True and False
 
     Args:
@@ -105,11 +104,8 @@ def _is_true_question(answer: str) -> str:
         </tr>
     """
     answers = ["Verdadero", "Falso"]
-    response = ""
-    if not _clear_sentence(answer).upper() == "Verdadero".upper():
-        answers.reverse()
 
-    response += f'<td  style="text-align: center"> {answers[0]} </td>'
+    response = f'<td  style="text-align: center"> {answers[0]} </td>'
     response += '<td  style="text-align: center"></td>'
     response += f'<td  style="text-align: center"> {answers[1]} </td>'
 
@@ -117,7 +113,7 @@ def _is_true_question(answer: str) -> str:
 
 
 def _generate_question_bool(txt: str, answer: str, number: int) -> str:
-    answer = _is_true_question(answer=answer)
+    answer = _get_question_bool(answer=answer)
 
     return _generate_txt_questions_base(txt=txt, number=number, answer=answer)
 
