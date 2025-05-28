@@ -189,7 +189,6 @@ def parse_questions(txt: str, data=None) -> list:
 
     content_raw = _clear_questions(txt)
     questions = []
-
     count = 0
 
     count_question = 1
