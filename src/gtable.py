@@ -5,11 +5,11 @@ Generate a table html from file text
 """
 
 import json
-from pathlib import Path
 import random
-from sys import argv
-from os import path
 import sys
+from os import path
+from pathlib import Path
+from sys import argv
 
 HELP = """
 How to use:
@@ -33,6 +33,7 @@ def _clear_sentence(question: str) -> str:
         str: Sentence clear, without number and any space
     """
     question = question.strip()
+    print(f"question: {question}")
     if question[0].isdigit() or question[0].startswith("-"):
         position = question.find(" ")
         return question[position:].strip()
@@ -51,10 +52,10 @@ def _generate_txt_questions_base(txt: str, number: int, answer: str) -> str:
     Returns:
         str: template html with all body
     """
-    return f' <tr><td colspan="3"> {number}.- {_clear_sentence(txt)}</td></tr>{answer}'
+    return f'<tr><td colspan="3"> {number}.- {_clear_sentence(txt)}</td></tr>{answer}'
 
 
-def _generate_answers(answer: str, answers_wrong: list)-> str:
+def _generate_answers(answer: str, answers_wrong: list) -> str:
     """Generate all text for the answer section row
 
     Args:
@@ -76,8 +77,7 @@ def _generate_answers(answer: str, answers_wrong: list)-> str:
     random.shuffle(answers_wrong)
 
     for answer_wrong in answers_wrong:
-
-        answer_final += f'<td width="33%" style="text-align: center;">{_clear_sentence(answer_wrong)}</td>\n'
+        answer_final += f'<td width="33%" style="text-align: center;">{(answer_wrong)}</td>\n'
 
     return f"<tr>{answer_final}</tr>"
 
@@ -103,8 +103,7 @@ def _get_question_bool(answer: str) -> str:
         <td width="33%" style="text-align: center;">Falso</td>
         </tr>
     """
-    answers = ["Verdadero", "Falso"]
-
+    answers = ("Verdadero", "Falso",)
     response = f'<td  style="text-align: center"> {answers[0]} </td>'
     response += '<td  style="text-align: center"></td>'
     response += f'<td  style="text-align: center"> {answers[1]} </td>'
@@ -148,7 +147,7 @@ def parse_question_rows(
     return _generate_question_bool(txt=txt, answer=answer, number=number)
 
 
-def load_file_from_exam(path_file) -> list:
+def load_file_from_exam(path_file) -> str:
     """Reade file from path and return all content in str"""
 
     with open(path_file, mode="r") as document:
@@ -165,7 +164,7 @@ def load_answer_from_json(json_path: str) -> dict:
         return json.load(file)
 
 
-def _clear_questions(txt) -> str:
+def _clear_questions(txt) -> list:
     content_raw = txt.replace("\t", "").split("\n")
     content_pre = []
 
@@ -184,8 +183,8 @@ def _clear_questions(txt) -> str:
 
 
 def parse_questions(txt: str, data=None) -> list:
-    """Take the content from file with questions to generate a list with questions
-    to load in a new file"""
+    """Take the content from file with questions to generate a list with
+    questions to load in a new file"""
 
     content_raw = _clear_questions(txt)
     questions = []
@@ -222,15 +221,14 @@ def build_file(path_to_save, questions):
         questions (list): All questions to save in list
     """
     with open(path_to_save, mode="w+") as file:
-
         for txt in questions:
             file.write(txt + "\n")
 
     print(f"File saved: {path_to_save}")
 
 
-def create_name(path_file: str) -> str:
-    """Generare the name file will save gift.txt
+def create_name(path_file: str | Path) -> str:
+    """Generate the name file will save gift.txt
 
     Args:
         path_file (str): path from file to input
