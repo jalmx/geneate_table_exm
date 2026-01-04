@@ -1,13 +1,11 @@
-import random
-
 from question import *
 
 
 class ConvertQuestionToTable:
 
-    def __init__(self, questions: list[QuestionBase], path_to_save: str = "."):
+    def __init__(self, questions: list[QuestionBase], name_file: str = "."):
         self._questions = questions
-        self._path_to_save = path_to_save
+        self._name_file = name_file
         self._html = None
 
     def _generate_html_row_question(self, question: QuestionBase,
@@ -34,12 +32,12 @@ class ConvertQuestionToTable:
             </tr>
         """
         answers = question.answer.get_all()
-        print("----", answers)
+
         response = ""
         if len(answers) == 2:
-            response = f'<td  style="text-align: center">{answers[0]}</td>'
-            response += '<td  style="text-align: center"></td>'
-            response += f'<td  style="text-align: center">{answers[1]}</td>'
+            response = f'<td  style="text-align: center">{answers[0]}</td>\n'
+            response += '<td  style="text-align: center"></td>\n'
+            response += f'<td  style="text-align: center">{answers[1]}</td>\n'
         else:
             for answer_wrong in random.sample(answers, len(answers)):
                 response += f'<td width="33%" style="text-align: center;">{answer_wrong}</td>\n'
@@ -58,22 +56,21 @@ class ConvertQuestionToTable:
 
         self._html += "</tbody></table>"
 
-        print(self._html)
-
-    def save(self, path_to_save, questions):
+    def save(self, path_to_save: str | None = None):
         """Save the final file
 
         Args:
             path_to_save (str): path_to_save to save the file
             questions (list): All questions to save in list
         """
-        self._path_to_save = path_to_save if path_to_save else self._path_to_save
+        self._name_file = path_to_save if path_to_save else self._name_file
 
-        with open(path_to_save, mode="w+") as file:
-            for txt in questions:
-                file.write(txt + "\n")
+        print(self._name_file)
 
-        print(f"File saved: {path_to_save}")
+        with open(self._name_file, mode="w+") as file:
+            file.write(self._html)
+
+        print(f"File saved: {self._name_file}")
 
 
 def test():
@@ -93,8 +90,13 @@ def test():
         AnswerMulti("127V", ("12V", "220V",)))
 
     qs = [q1, q2, q3]
-    ConvertQuestionToTable(qs).build_html_table()
+    c = ConvertQuestionToTable(qs)
+    c.build_html_table()
+    c.save("index.html")
 
 
 if __name__ == "__main__":
     test()
+
+def mifn:
+    pass

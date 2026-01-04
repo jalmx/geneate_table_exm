@@ -167,3 +167,4 @@ assets/
 *.html
 *.md
 
+.idea
